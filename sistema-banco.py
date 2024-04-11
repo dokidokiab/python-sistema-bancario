@@ -18,7 +18,9 @@ LIMITE_SAQUES = 3
 
 #função para o extrato
 def extrato():
+    print("=======EXTRATO=======")
     print(f"\nO saldo da conta é R${saldo_conta:.2f}.")
+    print("\nNenhuma transação foi realizada" if not extrato else extrato)
 
 #função para o saque
 def sacar(valor):
