@@ -1,7 +1,5 @@
 from random import *
 
-
-
 def menu():
     menu = """
 
