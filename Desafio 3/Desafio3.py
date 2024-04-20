@@ -1,5 +1,15 @@
 from abc import ABC
 from datetime import *
+import functools
+
+def registro_de_hora(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        print(f'\n-------Transação do tipo {args[0].__class__.__name__} realizada na data de {datetime.now().strftime("%d/%m/%Y às %H:%M")}!\n')
+        func(*args, **kwargs)
+    
+    return wrapper
+
 
 class Cliente:
     def __init__(self, endereco, contas=[]) -> None:
@@ -41,7 +51,7 @@ class PessoaFisica(Cliente):
         return self._data_nascimento
 
 class Conta:
-    def __init__(self, numero, agencia, cliente, historico) -> None:
+    def __init__(self, cliente, numero, agencia="0001") -> None:
         self._saldo = 0
         self._numero = numero
         self._agencia = agencia
@@ -70,19 +80,22 @@ class Conta:
     
     @classmethod
     def nova_conta(cls, cliente, numero):
-        return cls()
+        return cls(cliente, numero)
     
     def __str__(self) -> str:
-        return f"\nO saldo é {self._saldo}\n"
+        return f"\nNúmero: {self._numero} // Agência: {self._agencia} // Saldo: {self._saldo} //"
     
-    def sacar(self, valor):
+    def checar_saldo(self) -> str:
+        return f"\nO saldo é {self._saldo:.2f}\n"
+    
+    def sacar(self, valor) -> bool:
         if self._saldo >= valor:
             self._saldo -= valor
             return True
         else:
             return False
     
-    def depositar(self, valor):
+    def depositar(self, valor) -> bool:
         if valor > 0:
             self._saldo += valor
             return True
@@ -91,8 +104,8 @@ class Conta:
     
 
 class ContaCorrente(Conta):
-    def __init__(self, saldo, numero, agencia, cliente, historico, limite=800, limite_saques=3) -> None:
-        super().__init__(saldo, numero, agencia, cliente, historico)
+    def __init__(self, numero, cliente, agencia="0001", limite=800, limite_saques=3) -> None:
+        super().__init__(numero, cliente, agencia)
         self._limite = limite
         self._limite_saques = limite_saques
 
@@ -108,7 +121,7 @@ class ContaCorrente(Conta):
         quantidade_saques = 0
         
         for i in Historico.transacoes_historico:
-            if i["tipo"] == Saque:
+            if i["tipo"] == 'Saque':
                 quantidade_saques += 1
         
         if quantidade_saques >= self._limite_saques:
@@ -120,6 +133,39 @@ class ContaCorrente(Conta):
 
         return False
     
+    def relatorio(self, tipo=None):
+        match tipo:
+            case "d":
+                filtro = 'Deposito'
+            case "s":
+                filtro = 'Saque'
+            case _:
+                filtro = None
+
+        print("====RELATÓRIO====")
+
+        if filtro:
+            for transacao in self._historico.transacoes_historico:
+                if transacao['tipo'] == filtro:
+                    yield f"Data: {transacao['data']} // Tipo: {transacao['tipo']} // Valor: {transacao['valor']:.2f}"
+        else:
+             for transacao in self._historico.transacoes_historico:
+                    yield f"Data: {transacao['data']} // Tipo: {transacao['tipo']} // Valor: {transacao['valor']:.2f}"
+
+
+class ContaIterador:
+    def __init__(self, contas):
+        self.contas = contas
+        self.contador = 0
+    def __iter__(self):
+        return self
+    def __next__(self):
+        try:
+            conta = self.contas[self.contador]
+            self.contador += 1
+            return conta
+        except IndexError:
+            raise StopIteration
 
 class Transacao(ABC):
     def registrar(self, conta):
@@ -134,7 +180,7 @@ class Deposito(Transacao):
     def valor(self):
         return self._valor
 
-    @classmethod
+    @registro_de_hora
     def registrar(self, conta):
         transacao_feita = conta.depositar(self.valor)
 
@@ -150,6 +196,7 @@ class Saque(Transacao):
     def valor(self):
         return self._valor
     
+    @registro_de_hora
     def registrar(self, conta):
         transacao_feita = conta.sacar(self.valor)
 
@@ -166,4 +213,4 @@ class Historico:
         return self.transacoes
 
     def adicionar_transacao(self, transacao):
-        self.transacoes_historico.append({"tipo":transacao.__class__, "valor":transacao.valor, "data":datetime.now().strftime("%d/%m/%Y - %H:%M")})
+        self.transacoes_historico.append({"tipo":transacao.__class__.__name__, "valor":transacao.valor, "data":datetime.now().strftime("%d/%m/%Y - %H:%M")})

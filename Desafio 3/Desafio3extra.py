@@ -6,31 +6,24 @@ def menu():
 
     [d] Depositar
     [s] Sacar
-    [e] Extrato
+
+    [ss] Conferir Saldo
     
     [cp] Criar Usuário
     [cc] Criar Conta 
+
+    [r] Ver relatório da conta
 
     [q] Sair
 
     => """
     return input(menu)
 
-
-def extrato(saldo, /, *, extrato):
-    print("\n================ EXTRATO ================")
-    print("Não foram realizadas movimentações." if not extrato else extrato)
-    print(f"\nSaldo: R$ {saldo:.2f}")
-    print("==========================================")
-
-
 def main():
     saldo = 0
     limite = 500
     extrato = ""
     numero_saques = 0
-
-    usuarios = {}
     contas = []
 
     AGENCIA = "0001"
@@ -42,22 +35,22 @@ def main():
         if opcao == "d":
             valor = float(input("Informe o valor do depósito: "))
 
-            if conta:
+            try: 
                 Deposito(valor).registrar(conta)
-            else:
-                print("Erro: Não existe uma conta selecionada")
+            except UnboundLocalError:
+                print("\nErro: Não existe uma conta selecionada\nCrie uma conta!!\n")
 
 
         elif opcao == "s":
             valor = float(input("Informe o valor do saque: "))
             
-            if conta:
+            try: 
                 Saque(valor).registrar(conta)
-            else:
-                print("Erro: Não existe uma conta selecionada")
+            except UnboundLocalError:
+                print("\nErro: Não existe uma conta selecionada\nCrie uma conta!!\n")
 
-        elif opcao == "e":
-            print(conta)
+        elif opcao == "ss":
+            conta.checar_saldo()
 
         elif opcao == "cp":
             endereco = input("Digite seu endereço: ")
@@ -69,6 +62,18 @@ def main():
 
         elif opcao == "cc":
             conta = ContaCorrente.nova_conta(cliente, str(randint(00000000, 99999999)))
+            contas.append(conta)
+            print("\nConta criada com sucesso!\n")
+
+        elif opcao == "r":
+            tipo = input("\nQuais transações quer ver? \n[d] depósito\n[s] saque\n[qualquer tecla] todas:  ")
+            for i in conta.relatorio(tipo):
+                print(i)
+
+        #opção escondida
+        elif opcao == "lc":
+            for conta in ContaIterador(contas):
+                print(conta)
 
         elif opcao == "q":
             break
