@@ -1,24 +1,6 @@
 from Desafio3 import *
 from random import *
 
-def menu():
-    menu = """
-
-    [d] Depositar
-    [s] Sacar
-
-    [ss] Conferir Saldo
-    
-    [cp] Criar Usuário
-    [cc] Criar Conta 
-
-    [r] Ver relatório da conta
-
-    [q] Sair
-
-    => """
-    return input(menu)
-
 def main():
     saldo = 0
     limite = 500
@@ -33,51 +15,42 @@ def main():
         opcao = menu()
 
         if opcao == "d":
+            conta_selecionada = selecionar_conta(cliente)
             valor = float(input("Informe o valor do depósito: "))
-
             try: 
-                Deposito(valor).registrar(conta)
+                cliente.realizar_transacao(conta_selecionada, Deposito(valor))
             except UnboundLocalError:
                 print("\nErro: Não existe uma conta selecionada\nCrie uma conta!!\n")
 
 
         elif opcao == "s":
+            conta_selecionada = selecionar_conta(cliente)
             valor = float(input("Informe o valor do saque: "))
             
             try: 
-                Saque(valor).registrar(conta)
+                cliente.realizar_transacao(conta_selecionada, Saque(valor))
             except UnboundLocalError:
                 print("\nErro: Não existe uma conta selecionada\nCrie uma conta!!\n")
 
-        elif opcao == "ss":
-            conta.checar_saldo()
-
         elif opcao == "cp":
-            endereco = input("Digite seu endereço: ")
-            nome = input("Digite seu nome: ")
-            cpf = input("Digite seu CPF: ")
-            data_nascimento = input("Digite sua data de nascimento (DD-MM-YYYY):")
-            
-            cliente = PessoaFisica(endereco, [], cpf, nome, data_nascimento)
+            cliente = criar_pessoa_fisica()
 
         elif opcao == "cc":
-            conta = ContaCorrente.nova_conta(cliente, str(randint(00000000, 99999999)))
-            contas.append(conta)
+            conta_selecionada = ContaCorrente.nova_conta(cliente, str(randint(00000000, 99999999)))
+            cliente.adicionar_conta(conta_selecionada)
             print("\nConta criada com sucesso!\n")
 
-        elif opcao == "r":
-            tipo = input("\nQuais transações quer ver? \n[d] depósito\n[s] saque\n[qualquer tecla] todas:  ")
-            for i in conta.relatorio(tipo):
-                print(i)
+        elif opcao == "e":
+            exibir_extrato()
 
         #opção escondida
         elif opcao == "lc":
-            for conta in ContaIterador(contas):
-                print(conta)
+            for conta_selecionada in ContaIterador(todas_contas()):
+                print(conta_selecionada)
+            
 
         elif opcao == "q":
             break
-        
 
         else:
             print("Operação inválida, por favor selecione novamente a operação desejada.")

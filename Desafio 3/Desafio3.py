@@ -2,14 +2,16 @@ from abc import ABC
 from datetime import *
 import functools
 
+
 def registro_de_hora(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        print(f'\n-------Transação do tipo {args[0].__class__.__name__} realizada na data de {datetime.now().strftime("%d/%m/%Y às %H:%M")}!\n')
+        print(f'\n-------{func.__name__} : {datetime.now().strftime("%d/%m/%Y - %H:%M")}-------\n')
         func(*args, **kwargs)
     
     return wrapper
 
+_clientes = []
 
 class Cliente:
     def __init__(self, endereco, contas=[]) -> None:
@@ -25,9 +27,15 @@ class Cliente:
         return self._endereco
 
     def realizar_transacao(self, conta, transacao):
-        pass
+        LIMITE_TRANSACOES = 10
+
+        if len(conta._historico.transacoes_do_dia()) >= LIMITE_TRANSACOES:
+            print("\nErro: Não foi possível concluir a operação! Você excedeu o limite de transações de hoje!\n")
+        else:
+            transacao.registrar(conta)
 
     def adicionar_conta(self, conta):
+        print(conta)
         self._contas.append(conta)
 
 
@@ -51,7 +59,7 @@ class PessoaFisica(Cliente):
         return self._data_nascimento
 
 class Conta:
-    def __init__(self, cliente, numero, agencia="0001") -> None:
+    def __init__(self, cliente, numero, agencia="0001"):
         self._saldo = 0
         self._numero = numero
         self._agencia = agencia
@@ -84,9 +92,6 @@ class Conta:
     
     def __str__(self) -> str:
         return f"\nNúmero: {self._numero} // Agência: {self._agencia} // Saldo: {self._saldo} //"
-    
-    def checar_saldo(self) -> str:
-        return f"\nO saldo é {self._saldo:.2f}\n"
     
     def sacar(self, valor) -> bool:
         if self._saldo >= valor:
@@ -142,8 +147,8 @@ class ContaCorrente(Conta):
             case _:
                 filtro = None
 
-        print("====RELATÓRIO====")
-
+        if not self._historico.transacoes_historico:
+            print("\nNão foram realizadas transações!!!\n")
         if filtro:
             for transacao in self._historico.transacoes_historico:
                 if transacao['tipo'] == filtro:
@@ -214,3 +219,91 @@ class Historico:
 
     def adicionar_transacao(self, transacao):
         self.transacoes_historico.append({"tipo":transacao.__class__.__name__, "valor":transacao.valor, "data":datetime.now().strftime("%d/%m/%Y - %H:%M")})
+
+    def transacoes_do_dia(self):
+        hoje = datetime.now().date()
+        transacoes_hoje = []
+        for transacao in self.transacoes_historico:
+            if datetime.strptime(transacao['data'], "%d/%m/%Y").date() == hoje:
+                transacoes_hoje.append(transacao)
+        return transacoes_hoje
+
+def menu():
+    menu = """
+
+    [d] Depositar
+    [s] Sacar
+    [e] Extrato
+    
+    [cp] Criar Usuário
+    [cc] Criar Conta 
+
+
+    [q] Sair
+
+    => """
+    return input(menu)
+
+def criar_pessoa_fisica():
+    cpf = input("Digite seu CPF: ")
+    cliente = filtrar_cliente(cpf, _clientes)
+
+    if cliente:
+        print("\nErro: Cliente já existe!")
+        return
+
+    endereco = input("Digite seu endereço: ")
+    nome = input("Digite seu nome: ")
+    
+    data_nascimento = input("Digite sua data de nascimento (DD/MM/YYYY):")
+
+    cliente = PessoaFisica(endereco, [], cpf, nome, data_nascimento)
+
+    _clientes.append(cliente)
+    
+    return cliente
+
+
+def filtrar_cliente(cpf, clientes):
+    cliente_encontrado = [cliente for cliente in clientes if cliente._cpf == cpf]
+    return cliente_encontrado[0] if cliente_encontrado else None
+
+def exibir_extrato():
+        extrato = ""
+        cpf = input("Digite o CPF do cliente:  ")
+
+        cliente = filtrar_cliente(cpf, _clientes)
+        conta = selecionar_conta(cliente)
+
+        tipo = input("\nQuais transações quer ver? \n[d] depósito\n[s] saque\n[qualquer tecla] todas:  ")
+        for transacao in conta.relatorio(tipo):
+            extrato += transacao
+        
+        if not extrato:
+           extrato = "Não foram realizadas movimentações." 
+
+
+        print("\n================ EXTRATO ================")
+        print(extrato)
+        print(f"\nSaldo: R$ {conta.saldo:.2f}")
+        print("==========================================")
+
+def selecionar_conta(cliente:Cliente):
+    if len(cliente._contas) == 0:
+        print("\nNão existe nenhuma conta pertecente a este cliente. Crie uma!\n")
+        return
+    elif len(cliente._contas) == 1:
+        return cliente._contas[0]
+    else:
+        cont = 0
+        print("=========Suas Contas========")
+        for conta in cliente._contas:
+            print(f"{cont} - {str(conta)}\n")
+            cont += 1
+
+        print("====Selecione uma conta=====")
+        selecao = int(input("Digite o id da conta:  "))
+        return cliente._contas[selecao]
+            
+def todas_contas():
+    return [cliente._contas for cliente in _clientes]
